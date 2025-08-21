@@ -1,0 +1,10 @@
+deno.lock
+
+# coverage
+coverage/
+lcov.info
+
+# misc files
+.DS_Store
+.idea
+.vim

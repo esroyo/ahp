@@ -1,0 +1,8 @@
+{
+    "name": "@esroyo/ahp-cli",
+    "version": "0.1.0",
+    "exports": "./src/main.ts",
+    "imports": {
+        "enquirer": "npm:enquirer@2.3.6"
+    }
+}
