@@ -6,7 +6,7 @@ import {
     Intensity,
     type JsonDecision,
     type JsonDecisionComplete,
-    JsonDecisionFilled,
+    type JsonDecisionFilled,
     type JsonDecisionValid,
 } from './types.ts';
 
@@ -27,14 +27,114 @@ import {
     ValidationError,
 } from './errors.ts';
 
+/**
+ * Implementation of the Analytic Hierarchy Process (AHP) for multi-criteria decision making.
+ *
+ * The Decision class helps structure complex decisions by breaking them down into:
+ * - A goal (what you're trying to decide)
+ * - Criteria (factors to evaluate)
+ * - Alternatives (options to choose from)
+ * - Pairwise comparisons using the Saaty 1-9 scale
+ *
+ * @example
+ * ```typescript
+ * // Basic usage example
+ * const decision = new Decision();
+ * decision.goal = "Choose the best smartphone";
+ *
+ * // Add criteria
+ * decision.add({ criterion: "Price" });
+ * decision.add({ criterion: "Battery Life" });
+ * decision.add({ criterion: "Camera Quality" });
+ *
+ * // Add alternatives
+ * decision.add({ alternative: "iPhone 15" });
+ * decision.add({ alternative: "Samsung Galaxy S24" });
+ * decision.add({ alternative: "Google Pixel 8" });
+ *
+ * // Compare criteria importance (Battery Life is moderately more important than Price)
+ * decision.compare({
+ *   item: { name: "Battery Life" },
+ *   pair: { name: "Price" },
+ *   weight: 3
+ * });
+ *
+ * // Compare alternatives for each criterion
+ * decision.compare({
+ *   item: { name: "iPhone 15" },
+ *   pair: { name: "Samsung Galaxy S24" },
+ *   criterion: { name: "Camera Quality" },
+ *   weight: 5 // iPhone strongly preferred for camera
+ * });
+ *
+ * // Calculate final rankings
+ * decision.evaluate();
+ *
+ * // View results
+ * console.log(decision.alternatives.map(alt => ({
+ *   name: alt.name,
+ *   priority: alt.priority
+ * })));
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Creating from existing data
+ * const decision = Decision.from({
+ *   goal: "Hire a software engineer",
+ *   criteria: [
+ *     { name: "Technical Skills" },
+ *     { name: "Communication" },
+ *     { name: "Experience" }
+ *   ],
+ *   alternatives: [
+ *     { name: "Candidate A" },
+ *     { name: "Candidate B" },
+ *     { name: "Candidate C" }
+ *   ]
+ * });
+ *
+ * // The decision is automatically filled with empty comparison structures
+ * console.log(decision.validate()); // Shows what comparisons are still needed
+ * ```
+ */
 export class Decision implements JsonDecision {
+    /** Unique identifier for this decision */
     public id!: string;
+
+    /** The goal or objective of this decision */
     public goal!: string;
+
+    /** Array of criteria used to evaluate alternatives */
     public criteria!: Criterion[];
+
+    /** Array of alternatives being compared */
     public alternatives!: Alternative[];
+
+    /** Reference to the Intensity enum for convenience */
     public static Intensity = Intensity;
+
+    /** Function used to generate unique ids */
     protected uid: () => string;
 
+    /**
+     * Creates a new Decision instance.
+     *
+     * @param options Configuration options
+     * @param options.uid Custom function to generate unique ids. Defaults to crypto.randomUUID
+     *
+     * @example
+     * ```typescript
+     * // Default constructor with crypto.randomUUID
+     * const decision = new Decision();
+     *
+     * // Custom id generator
+     * let counter = 0;
+     * const decision = new Decision({
+     *   uid: () => `decision-${++counter}`
+     * });
+     * ```
+     */
     constructor(
         { uid = crypto.randomUUID.bind(crypto) }: { uid?: () => string } = {},
     ) {
@@ -42,6 +142,33 @@ export class Decision implements JsonDecision {
         this.fill();
     }
 
+    /**
+     * Creates a Decision instance from existing data.
+     * Automatically fills in missing structure like ids and comparison arrays.
+     *
+     * @param data JSON string or object containing decision data
+     * @returns A new Decision instance with filled structure
+     *
+     * @example
+     * ```typescript
+     * // From object
+     * const decision = Decision.from({
+     *   goal: "Choose vacation destination",
+     *   criteria: [
+     *     { name: "Cost" },
+     *     { name: "Weather" }
+     *   ],
+     *   alternatives: [
+     *     { name: "Hawaii" },
+     *     { name: "Europe" }
+     *   ]
+     * });
+     *
+     * // From JSON string
+     * const jsonData = '{"goal":"Choose laptop","criteria":[{"name":"Price"}]}';
+     * const decision = Decision.from(jsonData);
+     * ```
+     */
     public static from(
         data: string | JsonDecision,
     ): Decision & JsonDecisionFilled {
@@ -53,6 +180,21 @@ export class Decision implements JsonDecision {
         return decision;
     }
 
+    /**
+     * Fills in missing structure for the decision.
+     * - Generates ids for decision, criteria, and alternatives
+     * - Creates empty comparison arrays with proper structure
+     * - Sets default goal if missing
+     *
+     * This method is called automatically by the constructor and static methods.
+     *
+     * @example
+     * ```typescript
+     * const decision = new Decision();
+     * decision.criteria.push({ name: "New Criterion" });
+     * decision.fill(); // Generates id and comparison structure for the new criterion
+     * ```
+     */
     fill(): asserts this is this & JsonDecisionFilled {
         if (!this.id) {
             this.id = this.uid();
@@ -139,6 +281,54 @@ export class Decision implements JsonDecision {
         }
     }
 
+    /**
+     * Makes a pairwise comparison between two items using the Saaty 1-9 scale.
+     *
+     * For criteria comparisons (when no criterion parameter is provided):
+     * - Compares the relative importance of two criteria
+     *
+     * For alternative comparisons (when criterion parameter is provided):
+     * - Compares how two alternatives perform on a specific criterion
+     *
+     * @param params Comparison parameters
+     * @param params.item The item being compared (receives the weight)
+     * @param params.pair The item being compared against
+     * @param params.criterion The criterion for alternative comparisons (omit for criteria comparisons)
+     * @param params.weight The comparison weight (1-9 Saaty scale)
+     *
+     * @throws {ValidationError} When items are not found or weight is invalid
+     *
+     * @example
+     * ```typescript
+     * const decision = Decision.from({
+     *   criteria: [{ name: "Quality" }, { name: "Price" }],
+     *   alternatives: [{ name: "Product A" }, { name: "Product B" }]
+     * });
+     *
+     * // Compare criteria importance
+     * decision.compare({
+     *   item: { name: "Quality" },
+     *   pair: { name: "Price" },
+     *   weight: 5 // Quality is strongly more important than Price
+     * });
+     *
+     * // Compare alternatives on Quality criterion
+     * decision.compare({
+     *   item: { name: "Product A" },
+     *   pair: { name: "Product B" },
+     *   criterion: { name: "Quality" },
+     *   weight: 3 // Product A is moderately better than Product B on Quality
+     * });
+     *
+     * // Using ids instead of names
+     * decision.compare({
+     *   item: { id: "prod-a-id" },
+     *   pair: { id: "prod-b-id" },
+     *   criterion: { id: "price-id" },
+     *   weight: 7 // Product A is very strongly better than Product B on Price
+     * });
+     * ```
+     */
     compare(
         { item: inputItem, pair: inputPair, criterion, weight }: {
             item: Partial<Alternative | Criterion>;
@@ -232,6 +422,32 @@ export class Decision implements JsonDecision {
         }
     }
 
+    /**
+     * Adds a new criterion or alternative to the decision.
+     * Automatically generates id and creates comparison structure.
+     *
+     * @param options Object containing either criterion or alternative to add
+     * @param options.criterion Criterion to add (object or string name)
+     * @param options.alternative Alternative to add (object or string name)
+     *
+     * @throws {ValidationError} When name is missing or duplicated
+     *
+     * @example
+     * ```typescript
+     * const decision = new Decision();
+     *
+     * // Add criteria (multiple ways)
+     * decision.add({ criterion: "Quality" }); // Simple string
+     * decision.add({ criterion: { name: "Price", id: "custom-id" } }); // With custom id
+     *
+     * // Add alternatives
+     * decision.add({ alternative: "Product A" });
+     * decision.add({ alternative: { name: "Product B" } });
+     *
+     * // After adding, comparison structures are automatically created
+     * console.log(decision.criteria[0].comparisons); // Ready for comparisons
+     * ```
+     */
     add(
         options: {
             criterion?: Partial<Criterion> | string;
@@ -278,6 +494,31 @@ export class Decision implements JsonDecision {
         this.fill();
     }
 
+    /**
+     * Removes a criterion or alternative from the decision.
+     * Also removes all related comparisons.
+     *
+     * @param params Object specifying what to remove
+     * @param params.criterion Criterion to remove (by id or name)
+     * @param params.alternative Alternative to remove (by id or name)
+     *
+     * @example
+     * ```typescript
+     * const decision = Decision.from({
+     *   criteria: [{ name: "Quality" }, { name: "Price" }],
+     *   alternatives: [{ name: "Product A" }, { name: "Product B" }]
+     * });
+     *
+     * // Remove by name
+     * decision.remove({ criterion: { name: "Price" } });
+     *
+     * // Remove by id
+     * decision.remove({ alternative: { id: "prod-a-id" } });
+     *
+     * // Comparison structures are automatically updated
+     * console.log(decision.criteria.length); // 1 (Price removed)
+     * ```
+     */
     remove(
         { criterion, alternative }: {
             criterion?: Partial<Criterion>;
@@ -315,6 +556,29 @@ export class Decision implements JsonDecision {
         this.fill();
     }
 
+    /**
+     * Validates the decision structure and completeness.
+     * Checks for required fields, minimum counts, and missing comparisons.
+     *
+     * @returns Validation result with success flag and any errors found
+     *
+     * @example
+     * ```typescript
+     * const decision = new Decision();
+     * decision.goal = "Choose smartphone";
+     * decision.add({ criterion: "Price" });
+     * decision.add({ alternative: "iPhone" });
+     *
+     * const result = decision.validate();
+     * if (!result.valid) {
+     *   console.log("Issues found:");
+     *   result.errors.forEach(error => console.log(`- ${error.message}`));
+     * }
+     * // Output: "Issues found:"
+     * //         "- Found 1 criteria, but a minimum of 2 is required"
+     * //         "- Found 1 alternatives, but a minimum of 2 is required"
+     * ```
+     */
     validate(): { valid: boolean; errors: Error[] } {
         const errors: Error[] = [];
         const MINIMUM_CHARS = 3;
@@ -496,6 +760,34 @@ export class Decision implements JsonDecision {
         };
     }
 
+    /**
+     * Validates the decision and throws an error if validation fails.
+     * Use this when you want to ensure the decision is valid before proceeding.
+     *
+     * @throws {AggregateError} When validation fails, containing all validation errors
+     *
+     * @example
+     * ```typescript
+     * const decision = Decision.from({
+     *   goal: "Choose laptop",
+     *   criteria: [{ name: "Price" }, { name: "Performance" }],
+     *   alternatives: [{ name: "MacBook" }, { name: "ThinkPad" }]
+     * });
+     *
+     * try {
+     *   decision.assertValid(); // Will throw - no comparisons made yet
+     * } catch (error) {
+     *   console.log(`Validation failed: ${error.message}`);
+     *   // Handle validation errors
+     * }
+     *
+     * // Make all required comparisons...
+     * decision.compare({ item: { name: "Price" }, pair: { name: "Performance" }, weight: 3 });
+     * // ... add all other comparisons
+     *
+     * decision.assertValid(); // Now passes
+     * ```
+     */
     assertValid(): asserts this is this & JsonDecisionValid {
         const result = this.validate();
         if (!result.valid) {
@@ -503,6 +795,66 @@ export class Decision implements JsonDecision {
         }
     }
 
+    /**
+     * Evaluates the decision using the Analytic Hierarchy Process (AHP).
+     * Calculates priority weights for all criteria and alternatives using eigenvalue decomposition.
+     *
+     * The evaluation process:
+     * 1. Creates pairwise comparison matrices from your comparisons
+     * 2. Calculates the principal eigenvector of each matrix
+     * 3. Normalizes the eigenvectors to get priority weights
+     * 4. Combines criteria weights with alternative weights to get final rankings
+     *
+     * @throws {AggregateError} If the decision is not valid (missing comparisons, etc.)
+     *
+     * @example
+     * ```typescript
+     * const decision = Decision.from({
+     *   goal: "Choose vacation destination",
+     *   criteria: [{ name: "Cost" }, { name: "Weather" }],
+     *   alternatives: [{ name: "Hawaii" }, { name: "Colorado" }]
+     * });
+     *
+     * // Make all required comparisons
+     * decision.compare({
+     *   item: { name: "Weather" },
+     *   pair: { name: "Cost" },
+     *   weight: 3 // Weather is moderately more important
+     * });
+     *
+     * decision.compare({
+     *   item: { name: "Hawaii" },
+     *   pair: { name: "Colorado" },
+     *   criterion: { name: "Weather" },
+     *   weight: 5 // Hawaii strongly better weather
+     * });
+     *
+     * decision.compare({
+     *   item: { name: "Colorado" },
+     *   pair: { name: "Hawaii" },
+     *   criterion: { name: "Cost" },
+     *   weight: 7 // Colorado very strongly better cost
+     * });
+     *
+     * // Calculate final priorities
+     * decision.evaluate();
+     *
+     * // View results
+     * decision.alternatives.forEach(alt => {
+     *   console.log(`${alt.name}: ${(alt.priority! * 100).toFixed(1)}%`);
+     * });
+     * // Example output:
+     * // Hawaii: 45.2%
+     * // Colorado: 54.8%
+     *
+     * decision.criteria.forEach(criterion => {
+     *   console.log(`${criterion.name} importance: ${(criterion.priority! * 100).toFixed(1)}%`);
+     * });
+     * // Example output:
+     * // Cost importance: 25.0%
+     * // Weather importance: 75.0%
+     * ```
+     */
     evaluate(): asserts this is this & JsonDecisionComplete {
         this.assertValid();
 
@@ -538,8 +890,45 @@ export class Decision implements JsonDecision {
                     criterion.priority;
             }
         }
+
+        this.summary = {
+            recommendedChoice:
+                this.alternatives.toSorted((a, b) =>
+                    b.priority! - a.priority!
+                )[0].name,
+            breakdown: Decision.formatAsTable(this as JsonDecisionComplete),
+        };
     }
 
+    /**
+     * Creates a pairwise comparison matrix from criteria or alternatives data.
+     * This is used internally by the evaluate() method to perform eigenvalue calculations.
+     *
+     * @param data Array of criteria (for criteria matrix) or alternatives (for alternative matrix)
+     * @param criterionId Required when creating alternative matrices - specifies which criterion to use
+     * @returns Square matrix of pairwise comparison ratios
+     *
+     * @example
+     * ```typescript
+     * // This is typically used internally, but can be called directly for analysis
+     * const decision = Decision.from({
+     *   criteria: [{ name: "A" }, { name: "B" }],
+     *   alternatives: [{ name: "X" }, { name: "Y" }]
+     * });
+     *
+     * // Add some comparisons...
+     * decision.compare({ item: { name: "A" }, pair: { name: "B" }, weight: 3 });
+     *
+     * // Get the criteria comparison matrix
+     * const matrix = Decision.getWeigthsMatrix(decision.criteria);
+     * console.log(matrix);
+     * // Output: [[1, 3], [0.333, 1]]
+     * // - A vs A = 1 (equal)
+     * // - A vs B = 3 (A moderately preferred)
+     * // - B vs A = 1/3 (reciprocal)
+     * // - B vs B = 1 (equal)
+     * ```
+     */
     static getWeigthsMatrix(
         data: JsonDecisionValid['criteria'],
     ): number[][];
@@ -577,6 +966,29 @@ export class Decision implements JsonDecision {
         );
     }
 
+    /**
+     * Calculates the principal eigenvector of a matrix and normalizes it to sum to 1.
+     * This converts a pairwise comparison matrix into priority weights.
+     *
+     * The principal eigenvector represents the relative priorities derived from
+     * pairwise comparisons, which is the mathematical foundation of AHP.
+     *
+     * @param matrix Square matrix of pairwise comparisons
+     * @returns Normalized priority vector (sums to 1)
+     *
+     * @example
+     * ```typescript
+     * // Example: If Quality is 3x more important than Price
+     * const matrix = [
+     *   [1, 3],     // Quality vs [Quality, Price]
+     *   [1/3, 1]    // Price vs [Quality, Price]
+     * ];
+     *
+     * const priorities = Decision.getRightEigenvector(matrix);
+     * console.log(priorities);
+     * // Output: [0.75, 0.25] (Quality: 75%, Price: 25%)
+     * ```
+     */
     static getRightEigenvector(matrix: number[][]): Float64Array<ArrayBuffer> {
         const vector = eig(matrix).eigenvectors.right.slice(
             0,
@@ -584,5 +996,48 @@ export class Decision implements JsonDecision {
         );
         const scale = 1 / vector.reduce((acc, curr) => acc + curr, 0);
         return vector.map((p) => p * scale);
+    }
+
+    /**
+     * Creates an object that is suitable to be printed with console.table
+     */
+    static formatAsTable(
+        decision: JsonDecisionComplete,
+        precision: number = 3,
+    ): Record<string, Record<string, number>> {
+        const round = (value: number) => parseFloat(value.toFixed(precision));
+        const rows = decision.alternatives.map((
+            alternative,
+        ) => [
+            alternative.name,
+            Object.fromEntries(
+                decision.criteria.map((
+                    criterion,
+                ) => [
+                    criterion.name,
+                    round(
+                        alternative.comparisons.find((meas) =>
+                            meas.criterionId === criterion.id
+                        )!.priority * criterion.priority,
+                    ),
+                ]).concat([['Goal', round(alternative.priority)]]),
+            ),
+        ]);
+        const footer = [
+            'Totals',
+            Object.fromEntries(
+                Object.keys(rows[0][1]).map((
+                    key,
+                ) => [
+                    key,
+                    round(rows.reduce(
+                        (acc, curr) =>
+                            acc + curr[1][key as keyof typeof rows[0][1]],
+                        0,
+                    )),
+                ]),
+            ),
+        ];
+        return Object.fromEntries([...rows, footer]);
     }
 }

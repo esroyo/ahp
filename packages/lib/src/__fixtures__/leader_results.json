@@ -1,0 +1,322 @@
+{
+    "id": "1",
+    "goal": "Choose the most suitable leader",
+    "criteria": [
+        {
+            "id": "1",
+            "name": "Experience",
+            "comparisons": [
+                {
+                    "measurements": [
+                        {
+                            "pairId": "2",
+                            "weight": 4
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 3
+                        },
+                        {
+                            "pairId": "4",
+                            "weight": 7
+                        }
+                    ]
+                }
+            ],
+            "priority": 0.5475692389618302
+        },
+        {
+            "id": "2",
+            "name": "Education",
+            "comparisons": [
+                {
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "4",
+                            "weight": 3
+                        }
+                    ]
+                }
+            ],
+            "priority": 0.1265552843734184
+        },
+        {
+            "id": "3",
+            "name": "Charisma",
+            "comparisons": [
+                {
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 3
+                        },
+                        {
+                            "pairId": "4",
+                            "weight": 5
+                        }
+                    ]
+                }
+            ],
+            "priority": 0.2699499224522024
+        },
+        {
+            "id": "4",
+            "name": "Age",
+            "comparisons": [
+                {
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 1
+                        }
+                    ]
+                }
+            ],
+            "priority": 0.05592555421254895
+        }
+    ],
+    "alternatives": [
+        {
+            "id": "1",
+            "name": "Tom",
+            "comparisons": [
+                {
+                    "criterionId": "1",
+                    "measurements": [
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 4
+                        }
+                    ],
+                    "priority": 0.2171656088028063
+                },
+                {
+                    "criterionId": "2",
+                    "measurements": [
+                        {
+                            "pairId": "2",
+                            "weight": 3
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 1
+                        }
+                    ],
+                    "priority": 0.18839409663911974
+                },
+                {
+                    "criterionId": "3",
+                    "measurements": [
+                        {
+                            "pairId": "2",
+                            "weight": 5
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 9
+                        }
+                    ],
+                    "priority": 0.7428666222020377
+                },
+                {
+                    "criterionId": "4",
+                    "measurements": [
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 5
+                        }
+                    ],
+                    "priority": 0.26543334188349776
+                }
+            ],
+            "priority": 0.35813676942236544
+        },
+        {
+            "id": "2",
+            "name": "Dick",
+            "comparisons": [
+                {
+                    "criterionId": "1",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 4
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 9
+                        }
+                    ],
+                    "priority": 0.7170650412287758
+                },
+                {
+                    "criterionId": "2",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 1
+                        }
+                    ],
+                    "priority": 0.08096123199975072
+                },
+                {
+                    "criterionId": "3",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 4
+                        }
+                    ],
+                    "priority": 0.19388163339754472
+                },
+                {
+                    "criterionId": "4",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 3
+                        },
+                        {
+                            "pairId": "3",
+                            "weight": 9
+                        }
+                    ],
+                    "priority": 0.6716254530142466
+                }
+            ],
+            "priority": 0.4927881882343744
+        },
+        {
+            "id": "3",
+            "name": "Harry",
+            "comparisons": [
+                {
+                    "criterionId": "1",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        }
+                    ],
+                    "priority": 0.06576934996841788
+                },
+                {
+                    "criterionId": "2",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 5
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 7
+                        }
+                    ],
+                    "priority": 0.7306446713611295
+                },
+                {
+                    "criterionId": "3",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        }
+                    ],
+                    "priority": 0.06325174440041761
+                },
+                {
+                    "criterionId": "4",
+                    "measurements": [
+                        {
+                            "pairId": "1",
+                            "weight": 1
+                        },
+                        {
+                            "pairId": "2",
+                            "weight": 1
+                        }
+                    ],
+                    "priority": 0.06294120510225563
+                }
+            ],
+            "priority": 0.14907504234326008
+        }
+    ],
+    "summary": {
+        "recommendedChoice": "Dick",
+        "breakdown": {
+            "Tom": {
+                "Experience": 0.119,
+                "Education": 0.024,
+                "Charisma": 0.201,
+                "Age": 0.015,
+                "Goal": 0.358
+            },
+            "Dick": {
+                "Experience": 0.393,
+                "Education": 0.01,
+                "Charisma": 0.052,
+                "Age": 0.038,
+                "Goal": 0.493
+            },
+            "Harry": {
+                "Experience": 0.036,
+                "Education": 0.092,
+                "Charisma": 0.017,
+                "Age": 0.004,
+                "Goal": 0.149
+            },
+            "Totals": {
+                "Experience": 0.548,
+                "Education": 0.126,
+                "Charisma": 0.27,
+                "Age": 0.057,
+                "Goal": 1
+            }
+        }
+    }
+}

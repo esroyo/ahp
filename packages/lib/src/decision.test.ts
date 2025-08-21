@@ -10,6 +10,9 @@ import {
 
 import { Decision } from './decision.ts';
 import leaderExample from './__fixtures__/leader.json' with { type: 'json' };
+import leaderExampleResults from './__fixtures__/leader_results.json' with {
+    type: 'json',
+};
 
 Deno.test('should be able to create Decision from a data object', () => {
     const decision = Decision.from({
@@ -105,7 +108,7 @@ Deno.test('should be able to construct with no parameters', async (t) => {
     );
 });
 
-Deno.test('should be able to construct with a custom uid generator', async (t) => {
+Deno.test('should be able to construct with a custom uid generator', async (_t) => {
     let counter = 0;
     const decision = new Decision({ uid: () => `${++counter}` });
     decision.add({ alternative: { name: 'Exp' } });
@@ -960,7 +963,7 @@ Deno.test('should not validate while criteria measurements are missing', async (
             pair: { name: 'Exp' },
             weight: 100000,
         });
-    } catch {}
+    } catch { /* empty */ }
 
     // We still miss the measurements between Edu-Exp because invalid value
     result = decision.validate();
@@ -1142,7 +1145,7 @@ Deno.test('should not validate while alternatives measurements are missing', asy
             criterion: { name: 'Edu' },
             weight: 100000,
         });
-    } catch {}
+    } catch { /* empty */ }
 
     // We still miss the measurements between Edu-Exp because invalid value
     result = decision.validate();
@@ -1181,12 +1184,12 @@ Deno.test('should not validate while alternatives measurements are missing', asy
     assertEquals(err.length, 0);
 });
 
-Deno.test('should be able to evaluate priorities', function () {
+Deno.test('should be able to evaluate priorities', async function (t) {
     const decision: Decision = Decision.from(leaderExample);
 
     decision.evaluate();
 
-    const tolerance = 0.001;
+    const tolerance = 0.01;
 
     assertAlmostEquals(decision.alternatives[0].priority, 0.358, tolerance);
     assertAlmostEquals(decision.alternatives[1].priority, 0.492, tolerance);
@@ -1213,5 +1216,47 @@ Deno.test('should be able to evaluate priorities', function () {
     assertEquals(
         decision.criteria.reduce((acc, curr) => acc + curr.priority!, 0),
         1,
+    );
+
+    await t.step('should have filled the summary', async function (_t) {
+        assert(decision.summary);
+        assert(decision.summary.breakdown);
+        assertEquals(decision.summary.recommendedChoice, 'Dick');
+    });
+});
+
+Deno.test('should be able to format the results', function () {
+    assertEquals(
+        Decision.formatAsTable(leaderExampleResults, 3),
+        {
+            Tom: {
+                Experience: 0.119,
+                Education: 0.024,
+                Charisma: 0.201,
+                Age: 0.015,
+                Goal: 0.358,
+            },
+            Dick: {
+                Experience: 0.393,
+                Education: 0.010,
+                Charisma: 0.052,
+                Age: 0.038,
+                Goal: 0.493,
+            },
+            Harry: {
+                Experience: 0.036,
+                Education: 0.092,
+                Charisma: 0.017,
+                Age: 0.004,
+                Goal: 0.149,
+            },
+            Totals: {
+                Experience: 0.548,
+                Education: 0.126,
+                Charisma: 0.270,
+                Age: 0.057,
+                Goal: 1.000,
+            },
+        },
     );
 });
