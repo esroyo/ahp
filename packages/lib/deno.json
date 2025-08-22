@@ -24,7 +24,7 @@
     ]
   },
   "imports": {
-    "emlapack": "./vendor/npm/emlapack@0.0.3/index.min.cjs",
+    "emlapack": "./vendor/npm/emlapack@0.0.3/index.min.js",
     "matrix-eig": "./vendor/npm/matrix-eig@1.0.0/index.js",
     "type-fest": "npm:type-fest@4.41.0"
   }
