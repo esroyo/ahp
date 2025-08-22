@@ -47,7 +47,7 @@ export interface PromptOptions {
     /** The message displayed to the user */
     message: string;
     /** Optional validation function */
-    validate?: (input: unknown) => boolean | string;
+    validate?: (input: any) => boolean | string;
     /** Optional choices for select/multi-select prompts */
     choices?: Array<
         { name: string; value?: unknown; disabled?: boolean; initial?: unknown }

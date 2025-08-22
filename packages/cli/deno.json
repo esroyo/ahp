@@ -8,6 +8,13 @@
     "fmt": "deno fmt src/",
     "test": "deno test -A --parallel --permit-no-files"
   },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-explicit-any"
+      ]
+    }
+  },
   "imports": {
     "enquirer": "npm:enquirer@2.3.6",
     "@std/cli": "jsr:@std/cli@1.0.21"
