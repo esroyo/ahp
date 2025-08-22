@@ -21,7 +21,7 @@ across multiple criteria.
 
 1. **Run the CLI tool**:
    ```bash
-   deno run --allow-read --allow-write @esroyo/ahp-cli
+   deno run -A jsr:@esroyo/ahp-cli
    ```
 
 2. **Define your decision**:
@@ -89,25 +89,25 @@ FINAL RANKINGS:
 
 ```bash
 # Basic usage
-deno run --allow-read --allow-write @esroyo/ahp-cli
+deno run -A jsr:@esroyo/ahp-cli
 
 # Get help
-deno run @esroyo/ahp-cli --help
+deno run -A jsr:@esroyo/ahp-cli --help
 
 # Check version
-deno run @esroyo/ahp-cli --version
+deno run -A jsr:@esroyo/ahp-cli --version
 
 # Enable verbose output (level 1)
-deno run --allow-read --allow-write @esroyo/ahp-cli -v
+deno run -A jsr:@esroyo/ahp-cli -v
 
 # Enable debug mode (level 2)
-deno run --allow-read --allow-write @esroyo/ahp-cli -vv
+deno run -A jsr:@esroyo/ahp-cli -vv
 
 # Maximum verbosity for troubleshooting (level 3+)
-deno run --allow-read --allow-write @esroyo/ahp-cli -vvv
+deno run -A jsr:@esroyo/ahp-cli -vvv
 
 # Export results as JSON
-deno run --allow-read --allow-write @esroyo/ahp-cli -o results.json
+deno run -A jsr:@esroyo/ahp-cli -o results.json
 ```
 
 ### Available Options

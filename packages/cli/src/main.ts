@@ -5,7 +5,7 @@
  * complex decisions using the Analytic Hierarchy Process (AHP) methodology.
  *
  * Usage:
- *   deno run --allow-read --allow-write @esroyo/ahp-cli
+ *   deno run -A jsr:@esroyo/ahp-cli
  *
  * The tool will guide you through:
  * 1. Defining your decision goal
@@ -17,7 +17,7 @@
  * @example
  * ```bash
  * # Run the CLI tool
- * deno run --allow-read --allow-write @esroyo/ahp-cli
+ * deno run -A jsr:@esroyo/ahp-cli
  *
  * # Example session:
  * # Goal: "Choose the best laptop for work"
@@ -161,7 +161,7 @@ function showHelp(): void {
 AHP Decision Making CLI Tool
 
 USAGE:
-    deno run --allow-read --allow-write @esroyo/ahp-cli [OPTIONS]
+    deno run -A jsr:@esroyo/ahp-cli [OPTIONS]
 
 OPTIONS:
     -h, --help              Show this help message
@@ -178,16 +178,16 @@ VERBOSITY LEVELS:
 
 EXAMPLES:
     # Basic interactive session
-    deno run --allow-read --allow-write @esroyo/ahp-cli
+    deno run -A jsr:@esroyo/ahp-cli
     
     # Verbose output to see progress
-    deno run --allow-read --allow-write @esroyo/ahp-cli -v
+    deno run -A jsr:@esroyo/ahp-cli -v
     
     # Debug mode for troubleshooting
-    deno run --allow-read --allow-write @esroyo/ahp-cli -vv
+    deno run -A jsr:@esroyo/ahp-cli -vv
     
     # Save results as JSON with verbose output
-    deno run --allow-read --allow-write @esroyo/ahp-cli -o results.json -v
+    deno run -A jsr:@esroyo/ahp-cli -o results.json -v
     
 ABOUT:
     This tool implements the Analytic Hierarchy Process (AHP) for structured
