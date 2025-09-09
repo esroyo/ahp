@@ -1,4 +1,4 @@
-import type { prompt } from 'enquirer';
+import type { Decision } from '@esroyo/ahp-lib';
 
 /**
  * Type alias for the enquirer prompt function.
@@ -13,7 +13,10 @@ import type { prompt } from 'enquirer';
  * const mockPrompt: Prompt = async (questions) => ({ answer: 'test' });
  * ```
  */
-export type Prompt = typeof prompt;
+export type Prompt = <T = object>(
+    questions: PromptOptions | PromptOptions[],
+    runState: RunState,
+) => Promise<T>;
 
 /**
  * Base configuration options for enquirer prompts.
@@ -224,3 +227,13 @@ export interface Logger {
     /** Error output */
     error: (...data: unknown[]) => void;
 }
+
+export type RunState = {
+    decision?: Decision;
+    steps: PromptOptionsWithReply[];
+    phase: number;
+    phaseSteps: number;
+    phaseStep: number;
+    totalSteps: number;
+    totalStep: number;
+};
