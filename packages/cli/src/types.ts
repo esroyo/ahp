@@ -224,8 +224,3 @@ export interface Logger {
     /** Error output */
     error: (...data: unknown[]) => void;
 }
-
-/**
- * Configuration options for the AHP CLI run function.
- */
-export type RunConfig = Pick<CliConfig, 'output'>;

@@ -1,4 +1,4 @@
-import { Decision, type JsonDecisionComplete } from '@esroyo/ahp-lib';
+import { Decision } from '@esroyo/ahp-lib';
 import type {
     ComparisonResponse,
     DecisionSetupResponse,
@@ -6,7 +6,6 @@ import type {
     Logger,
     Prompt,
     PromptOptionsWithReply,
-    RunConfig,
     ScaleResponse,
 } from './types.ts';
 
@@ -39,8 +38,7 @@ import type {
 export async function run(
     prompt: Prompt,
     logger: Logger,
-    config: RunConfig = {},
-): Promise<void> {
+): Promise<Decision> {
     const end = <T>(list: T[]): T => list[list.length - 1];
 
     /**
@@ -102,6 +100,12 @@ export async function run(
             },
         },
     ];
+
+    // Welcome message
+    logger.info('Welcome to the AHP decision making tool!');
+    logger.info(
+        'This tool will help you make structured decisions using proven mathematical methods.\n',
+    );
 
     // Collect initial decision structure
     logger.info("Let's structure your decision step by step.\n");
@@ -363,58 +367,8 @@ export async function run(
      */
     logger.info('\n\nCalculating results...\n');
 
-    try {
-        decision.evaluate();
-    } catch (error) {
-        logger.info('❌ Error during evaluation:');
-        if (Error.isError(error)) {
-            logger.info(error.message);
-        }
-        logger.info(
-            '\nThis might indicate incomplete or inconsistent comparisons.',
-        );
-        Deno.exit(1);
-    }
+    decision.evaluate();
 
-    // For console format, use the rich display
-    printResults(decision, logger);
-
-    // If file output has been requested, save as JSON
-    if (config.output) {
-        try {
-            await Deno.writeTextFile(
-                config.output,
-                JSON.stringify(decision, null, 2),
-            );
-            logger.verbose(
-                `✅ Results saved as JSON to: ${config.output}`,
-            );
-        } catch (error) {
-            if (Error.isError(error)) {
-                logger.info(`❌ Failed to write to file: ${error.message}`);
-            }
-        }
-    }
-
-    logger.info('\n' + '='.repeat(50));
-    logger.info(
-        `✅ Decision analysis complete! The recommended choice is: ${decision.summary.recommendedChoice}`,
-    );
-
-    // Graceful exit
-    Deno.exit(0);
-}
-
-/**
- * Display results in rich console format.
- *
- * @param decision - Evaluated Decision object
- * @param logger - Logger instance for output
- */
-function printResults(
-    decision: JsonDecisionComplete,
-    logger: Record<'info' | 'table', (...data: unknown[]) => void>,
-) {
     // Prepare and sort results
     const results = decision.alternatives
         .map((alt) => ({
@@ -444,4 +398,11 @@ function printResults(
 
     logger.info('\n DETAILED BREAKDOWN:');
     logger.table(decision.summary.breakdown);
+
+    logger.info('\n' + '='.repeat(50));
+    logger.info(
+        `✅ Decision analysis complete! The recommended choice is: ${decision.summary.recommendedChoice}`,
+    );
+
+    return decision;
 }

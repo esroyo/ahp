@@ -31,6 +31,7 @@
 
 import enquirer from 'enquirer';
 import { parseArgs } from '@std/cli/parse-args';
+
 import pkgConfig from '../deno.json' with { type: 'json' };
 import { run } from './run.ts';
 
@@ -253,12 +254,6 @@ async function main(): Promise<void> {
         // Debug output for configuration
         logger.debug('Parsed CLI configuration:', config);
 
-        // Welcome message
-        logger.info('Welcome to the AHP decision making tool!');
-        logger.info(
-            'This tool will help you make structured decisions using proven mathematical methods.\n',
-        );
-
         if (config.verbose) {
             logger.verbose(
                 'Running in verbose mode - detailed progress will be shown',
@@ -270,24 +265,39 @@ async function main(): Promise<void> {
         }
 
         // Enhanced run function with configuration
-        await run(enquirer.prompt, logger, config);
-    } catch (error) {
-        console.error('\n❌ An error occurred:');
-        if (Error.isError(error)) {
-            console.error(error.message);
+        const decision = await run(enquirer.prompt, logger);
 
-            if (error.stack) {
-                console.error('\nStack trace:');
-                console.error(error.stack);
+        // If file output has been requested, save as JSON
+        if (config.output) {
+            try {
+                await Deno.writeTextFile(
+                    config.output,
+                    JSON.stringify(decision, null, 2),
+                );
+                logger.verbose(
+                    `✅ Results saved as JSON to: ${config.output}`,
+                );
+            } catch (error) {
+                if (Error.isError(error)) {
+                    logger.info(`❌ Failed to write to file: ${error.message}`);
+                }
             }
         }
 
-        console.error(
+        Deno.exit(0);
+    } catch (error) {
+        console.log('\n❌ An error occurred:');
+        if (Error.isError(error)) {
+            console.error(error.message);
+        }
+
+        console.log(
             '\nIf this error persists, please report it as an issue.',
         );
-        console.error(
+        console.log(
             'Use --help for usage information or --debug for detailed logging.',
         );
+
         Deno.exit(1);
     }
 }
