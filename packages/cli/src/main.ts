@@ -36,46 +36,6 @@ import pkgConfig from '../deno.json' with { type: 'json' };
 import { run } from './run.ts';
 
 /**
- * Enhanced console logging with better formatting, timestamp support, and log levels.
- * Provides structured output for the CLI application with configurable verbosity levels.
- *
- * @param config - Configuration object containing verbose level and debug flags
- */
-function createLogger(
-    config: { verbose: boolean; debug: boolean; verboseLevel: number },
-) {
-    return {
-        info: (...data: unknown[]) => {
-            console.log(...data);
-        },
-        table: (...data: unknown[]) => {
-            console.table(...data);
-        },
-        verbose: (...data: unknown[]) => {
-            if (config.verbose) { // -v or higher
-                const timestamp = new Date().toLocaleTimeString();
-                console.log(`[${timestamp}]`, ...data);
-            }
-        },
-        debug: (...data: unknown[]) => {
-            if (config.debug) { // -vv or higher
-                const timestamp = new Date().toLocaleTimeString();
-                console.log(`[DEBUG ${timestamp}]`, ...data);
-            }
-        },
-        trace: (...data: unknown[]) => {
-            if (config.verboseLevel >= 3) { // -vvv or higher
-                const timestamp = new Date().toLocaleTimeString();
-                console.log(`[TRACE ${timestamp}]`, ...data);
-            }
-        },
-        error: (...data: unknown[]) => {
-            console.error(...data);
-        },
-    };
-}
-
-/**
  * Parse and validate command line arguments using Deno's standard CLI parser.
  * Provides type-safe argument parsing with built-in validation and help generation.
  *
@@ -89,23 +49,7 @@ function createLogger(
  * ```
  */
 function parseCliArguments(args: string[]) {
-    // First, manually count the verbose flags before parsing
-    let verboseCount = 0;
-    const filteredArgs: string[] = [];
-
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i];
-        if (arg === '-v') {
-            verboseCount++;
-        } else if (arg.startsWith('-v') && arg.length > 2) {
-            // Handle -vv, -vvv, etc.
-            verboseCount += arg.length - 1; // -vv = 2, -vvv = 3, etc.
-        } else {
-            filteredArgs.push(arg);
-        }
-    }
-
-    const parsed = parseArgs(filteredArgs, {
+    const parsed = parseArgs(args, {
         boolean: ['help', 'version'],
         string: ['output'],
         alias: {
@@ -114,13 +58,6 @@ function parseCliArguments(args: string[]) {
             o: 'output',
         },
         unknown: (arg: string) => {
-            // Skip -v flags as we've already processed them
-            if (
-                arg === '-v' ||
-                (arg.startsWith('-v') && arg.length > 2 && arg.match(/^-v+$/))
-            ) {
-                return true; // Allow these flags
-            }
             console.error(`❌ Unknown option: ${arg}`);
             console.error('Use --help for available options');
             Deno.exit(1);
@@ -131,23 +68,16 @@ function parseCliArguments(args: string[]) {
     if (parsed.output) {
         const expectedExtension = '.json';
         if (!parsed.output.endsWith(expectedExtension)) {
-            console.log(
+            console.info(
                 `⚠️  Warning: Output file should have ${expectedExtension} extension`,
             );
         }
     }
 
-    // Determine verbosity levels
-    const isVerbose = verboseCount >= 1; // -v
-    const isDebug = verboseCount >= 2; // -vv or more
-
     return {
         help: parsed.help as boolean,
         version: parsed.version as boolean,
         output: parsed.output as string | undefined,
-        verbose: isVerbose,
-        debug: isDebug,
-        verboseLevel: verboseCount,
         // Include any additional positional arguments
         _: parsed._,
     };
@@ -168,27 +98,13 @@ OPTIONS:
     -h, --help              Show this help message
     -V, --version           Show version information
     -o, --output <FILE>     Save results to JSON file
-    -v                      Enable verbose output (level 1)
-    -vv                     Enable debug mode (level 2+)
-
-VERBOSITY LEVELS:
-    (none)      Standard output with essential information
-    -v          Verbose mode - shows progress and timing details
-    -vv         Debug mode - includes internal state and detailed logging
-    -vvv+       Extra debug - maximum verbosity for troubleshooting
 
 EXAMPLES:
     # Basic interactive session
     deno run -A jsr:@esroyo/ahp-cli
     
-    # Verbose output to see progress
-    deno run -A jsr:@esroyo/ahp-cli -v
-    
-    # Debug mode for troubleshooting
-    deno run -A jsr:@esroyo/ahp-cli -vv
-    
-    # Save results as JSON with verbose output
-    deno run -A jsr:@esroyo/ahp-cli -o results.json -v
+    # Save results as JSON
+    deno run -A jsr:@esroyo/ahp-cli -o results.json
     
 ABOUT:
     This tool implements the Analytic Hierarchy Process (AHP) for structured
@@ -213,8 +129,6 @@ TIPS:
     • Be consistent in your comparisons for reliable results
     • Take breaks during long sessions to maintain judgment quality
     • Review criteria weights to ensure they align with your priorities
-    • Use -v for progress tracking during long decision sessions
-    • Use -vv for troubleshooting if you encounter issues
     `);
 }
 
@@ -238,9 +152,7 @@ For more information: https://github.com/esroyo/ahp
 async function main(): Promise<void> {
     try {
         const config = parseCliArguments(Deno.args);
-        const logger = createLogger(config);
 
-        // Handle help and version flags
         if (config.help) {
             showHelp();
             Deno.exit(0);
@@ -251,21 +163,7 @@ async function main(): Promise<void> {
             Deno.exit(0);
         }
 
-        // Debug output for configuration
-        logger.debug('Parsed CLI configuration:', config);
-
-        if (config.verbose) {
-            logger.verbose(
-                'Running in verbose mode - detailed progress will be shown',
-            );
-        }
-
-        if (config.debug) {
-            logger.debug('Debug mode enabled - internal state will be logged');
-        }
-
-        // Enhanced run function with configuration
-        const decision = await run(enquirer.prompt, logger);
+        const decision = await run(enquirer.prompt, console);
 
         // If file output has been requested, save as JSON
         if (config.output) {
@@ -274,27 +172,29 @@ async function main(): Promise<void> {
                     config.output,
                     JSON.stringify(decision, null, 2),
                 );
-                logger.verbose(
+                console.info(
                     `✅ Results saved as JSON to: ${config.output}`,
                 );
             } catch (error) {
                 if (Error.isError(error)) {
-                    logger.info(`❌ Failed to write to file: ${error.message}`);
+                    console.info(
+                        `❌ Failed to write to file: ${error.message}`,
+                    );
                 }
             }
         }
 
         Deno.exit(0);
     } catch (error) {
-        console.log('\n❌ An error occurred:');
+        console.info('\n❌ An error occurred:');
         if (Error.isError(error)) {
             console.error(error.message);
         }
 
-        console.log(
+        console.info(
             '\nIf this error persists, please report it as an issue.',
         );
-        console.log(
+        console.info(
             'Use --help for usage information or --debug for detailed logging.',
         );
 

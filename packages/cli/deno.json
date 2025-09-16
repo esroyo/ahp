@@ -19,7 +19,7 @@
     }
   },
   "imports": {
-    "enquirer": "npm:enquirer@2.3.6",
+    "enquirer": "npm:enquirer@2.4.1",
     "@std/cli": "jsr:@std/cli@1.0.21"
   }
 }

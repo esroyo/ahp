@@ -5,9 +5,44 @@ import type {
     IntensityScaleOption,
     Logger,
     Prompt,
+    PromptOptions,
     RunState,
     ScaleResponse,
 } from './types.ts';
+
+const phaseMap: Record<number, string> = {
+    1: 'Setup',
+    2: 'Comparing alternatives',
+    3: 'Comparing criteria',
+    4: 'Results',
+};
+
+const percentage = (pos: number, total: number): number =>
+    Math.round(pos / total * 100);
+
+const buildStatusLine = (runState: RunState) => {
+    const progress = percentage(runState.totalStep, runState.totalSteps);
+    const length = 20;
+    const progressBar = Array.from(
+        { length },
+        (_, idx) => percentage(idx, length) < progress ? '#' : '-',
+    ).join('');
+    const goal = `   Goal:         ${runState.decision?.goal || '?'}`;
+    const criteria = `   Criteria:     (${
+        runState.decision?.criteria.length || '?'
+    }) ${runState.decision?.criteria.map((c) => c.name).join(', ') || '-'}`;
+    const alternatives = `   Alternatives: (${
+        runState.decision?.alternatives.length || '?'
+    }) ${runState.decision?.alternatives.map((a) => a.name).join(', ') || '-'}`;
+    const step =
+        `   Progress:     [${progressBar}] ${progress}% | ${runState.totalStep}/${runState.totalSteps}`;
+    const phase = `   Phase:        ${
+        phaseMap[runState.phase]
+    } | ${runState.phaseStep}/${runState.phaseSteps}`;
+    return ['', goal, criteria, alternatives, '', step, phase, ''].join('\n');
+};
+
+const pairs = (n: number): number => n === 0 ? 0 : (n - 1) + pairs(n - 1);
 
 /**
  * Interactive CLI runner for AHP (Analytic Hierarchy Process) decision making.
@@ -20,18 +55,13 @@ import type {
  * 5. Calculate and display final rankings
  *
  * @param prompt - The prompt function (typically from enquirer)
- * @param print - Output function for displaying results
- * @param config - Configuration options for logging and output
+ * @param logger - Output functions for displaying results
  *
  * @example
  * ```typescript
  * import enquirer from 'enquirer';
  * import { run } from './run.ts';
  *
- * // Run with standard console output
- * await run(enquirer.prompt, console);
- *
- * // Run with verbose logging
  * await run(enquirer.prompt, console);
  * ```
  */
@@ -39,8 +69,6 @@ export async function run(
     prompt: Prompt,
     logger: Logger,
 ): Promise<Decision> {
-    const end = <T>(list: T[]): T => list[list.length - 1];
-
     /**
      * Predefined intensity scale for user-friendly comparison input.
      * Maps AHP intensity values to descriptive labels that users can understand.
@@ -59,146 +87,99 @@ export async function run(
         phaseStep: 1,
         totalSteps: 0,
         totalStep: 0,
-        /**
-         * Initial setup prompts to gather decision structure.
-         * These prompts collect the goal, criteria, and alternatives needed
-         * to build the AHP decision framework.
-         */
-        steps: [
-            {
-                type: 'input',
-                name: 'goal',
-                message: 'What is the decision you need to make?',
-                validate: (input: string) => {
-                    if (!input || input.trim().length < 3) {
-                        return 'Goal must be at least 3 characters long';
-                    }
-                    return true;
-                },
-            },
-            {
-                type: 'list',
-                name: 'criteria',
-                message: 'Type a comma-separated list of criteria (minimum 2)',
-                validate: (items: string[]) => {
-                    if (items.length < 2) {
-                        return 'Please provide at least 2 criteria';
-                    }
-                    if (items.some((item) => item.length < 3)) {
-                        return 'Each criterion must be at least 3 characters long';
-                    }
-                    return true;
-                },
-            },
-            {
-                type: 'list',
-                name: 'alternatives',
-                message:
-                    'Type a comma-separated list of alternative candidates (minimum 2)',
-                validate: (items: string[]) => {
-                    if (items.length < 2) {
-                        return 'Please provide at least 2 alternatives';
-                    }
-                    if (items.some((item) => item.length < 3)) {
-                        return 'Each alternative must be at least 3 characters long';
-                    }
-                    return true;
-                },
-            },
-        ],
     };
 
     // Welcome message
-    logger.info('Welcome to the AHP decision making tool!');
-    logger.info(
-        'This tool will help you make structured decisions using proven mathematical methods.\n',
-    );
+    logger.clear();
+    logger.info(`Welcome to the AHP decision making tool!
+This tool will help you make structured decisions using proven mathematical methods.
 
-    // Collect initial decision structure
-    logger.info("Let's structure your decision step by step.\n");
+Let's structure your decision step by step.
+`);
 
-    logger.debug('Starting decision setup phase');
-    logger.trace({ runState });
+    /**
+     * Initial setup prompts to gather decision structure.
+     * These prompts collect the goal, criteria, and alternatives needed
+     * to build the AHP decision framework.
+     */
+    const setupSteps: PromptOptions[] = [
+        {
+            type: 'input',
+            name: 'goal',
+            message: 'What is the decision you need to make?',
+            validate: (input: string) => {
+                if (!input || input.trim().length < 3) {
+                    return 'Goal must be at least 3 characters long';
+                }
+                return true;
+            },
+        },
+        {
+            type: 'list',
+            name: 'criteria',
+            message: 'Type a comma-separated list of criteria (minimum 2)',
+            validate: (items: string[]) => {
+                if (items.length < 2) {
+                    return 'Please provide at least 2 criteria';
+                }
+                if (items.some((item) => item.length < 3)) {
+                    return 'Each criterion must be at least 3 characters long';
+                }
+                return true;
+            },
+        },
+        {
+            type: 'list',
+            name: 'alternatives',
+            message:
+                'Type a comma-separated list of alternative candidates (minimum 2)',
+            validate: (items: string[]) => {
+                if (items.length < 2) {
+                    return 'Please provide at least 2 alternatives';
+                }
+                if (items.some((item) => item.length < 3)) {
+                    return 'Each alternative must be at least 3 characters long';
+                }
+                return true;
+            },
+        },
+    ];
 
-    const response = await prompt<DecisionSetupResponse>(
-        runState.steps,
+    const setupResponse = await prompt<DecisionSetupResponse>(
+        setupSteps,
         runState,
     );
-    logger.debug('User provided setup:', response);
-
-    runState.phaseStep = 3;
 
     // Create decision from user input
     const decision: Decision = Decision.from({
-        goal: response.goal,
-        criteria: response.criteria.map((name) => ({ name: name.trim() })),
-        alternatives: response.alternatives.map((name) => ({
+        goal: setupResponse.goal,
+        criteria: setupResponse.criteria.map((name) => ({ name: name.trim() })),
+        alternatives: setupResponse.alternatives.map((name) => ({
             name: name.trim(),
         })),
     });
+
+    runState.phaseStep = 3;
     runState.decision = decision;
 
-    logger.debug('Decision object created with IDs:', {
-        decisionId: decision.id,
-        criteria: decision.criteria.map((c) => ({ name: c.name, id: c.id })),
-        alternatives: decision.alternatives.map((a) => ({
-            name: a.name,
-            id: a.id,
-        })),
-    });
-
-    logger.info(`\n✅ Decision structure created:`);
-    logger.info(`   Goal: ${decision.goal}`);
-    logger.info(
-        `   Criteria (${decision.criteria.length}): ${
-            decision.criteria.map((c) => c.name).join(', ')
-        }`,
-    );
-    logger.info(
-        `   Alternatives (${decision.alternatives.length}): ${
-            decision.alternatives.map((a) => a.name).join(', ')
-        }`,
-    );
-
-    const totalComparisons =
-        (decision.alternatives.length * (decision.alternatives.length - 1) *
-            decision.criteria.length) +
-        (decision.criteria.length * (decision.criteria.length - 1));
-    runState.totalSteps = totalComparisons + runState.phaseSteps;
+    const alternativeComparisons = pairs(decision.alternatives.length) *
+        decision.criteria.length;
+    const criteriaComparisons = pairs(decision.criteria.length);
+    const totalComparisons = alternativeComparisons + criteriaComparisons;
+    runState.totalSteps = totalComparisons + runState.phaseSteps + 1;
     runState.totalStep = runState.phaseStep;
-    logger.trace({ runState });
-    logger.info(
-        `\nYou'll need to make ${totalComparisons} pairwise comparisons.`,
-    );
-    logger.verbose(
-        `Breakdown: ${
-            decision.alternatives.length * (decision.alternatives.length - 1) *
-            decision.criteria.length
-        } alternative comparisons + ${
-            decision.criteria.length * (decision.criteria.length - 1)
-        } criteria comparisons`,
-    );
-    logger.info('');
 
     /**
      * Phase 2: Alternative Comparisons
      * For each criterion, compare all pairs of alternatives to determine
      * their relative performance on that specific criterion.
      */
-    logger.info('Phase 2: Comparing alternatives for each criterion...\n');
-
+    logger.clear();
     runState.phase = 2;
     runState.phaseStep = 0;
-    runState.phaseSteps = decision.alternatives.length *
-        (decision.alternatives.length - 1) * decision.criteria.length;
-    logger.trace({ runState });
+    runState.phaseSteps = alternativeComparisons;
 
     for (const criterion of decision.criteria) {
-        logger.info(`\n--- Evaluating "${criterion.name}" ---`);
-        logger.debug(
-            `Processing criterion: ${criterion.name} (ID: ${criterion.id})`,
-        );
-
         for (const candidate of decision.alternatives) {
             for (const otherCandidate of decision.alternatives) {
                 if (candidate === otherCandidate) {
@@ -214,39 +195,31 @@ export async function run(
                         )
                     )
                 ) {
-                    logger.debug(
-                        `Skipping existing comparison: ${candidate.name} vs ${otherCandidate.name} on ${criterion.name}`,
-                    );
                     continue;
                 }
 
                 runState.phaseStep += 1;
                 runState.totalStep += 1;
-                logger.trace({ runState });
-
-                logger.verbose(
-                    `Starting comparison ${runState.phaseStep}/${runState.phaseSteps}: ${candidate.name} vs ${otherCandidate.name} on ${criterion.name}`,
-                );
 
                 const choices = [
                     { name: candidate.name, value: candidate.name },
                     { name: otherCandidate.name, value: otherCandidate.name },
                 ];
 
-                // Step 1: Identify the weaker candidate
-                runState.steps.push({
+                // Substep 1: Identify the weaker candidate
+                const step1 = {
+                    header: buildStatusLine(runState),
                     type: 'select',
                     name: 'name',
-                    message:
-                        `[${runState.phaseStep}/${runState.phaseSteps}] Which performs worse on "${criterion.name}"?`,
+                    message: `Which performs worse on "${criterion.name}"?`,
                     choices,
-                });
+                };
 
+                logger.clear();
                 const weakerResponse = await prompt<ComparisonResponse>(
-                    end(runState.steps),
+                    step1,
                     runState,
                 );
-                end(runState.steps).reply = weakerResponse;
 
                 const weaker = decision.alternatives.find((alt) =>
                     alt.name === weakerResponse.name
@@ -266,29 +239,26 @@ export async function run(
                     weight: Decision.Intensity.Equal,
                 });
 
-                runState.phaseStep += 1;
-                runState.totalStep += 1;
-                logger.trace({ runState });
-
-                // Step 2: Determine the intensity of preference
-                runState.steps.push({
+                // Substep 2: Determine the intensity of preference
+                const step2 = {
+                    header: buildStatusLine(runState),
                     type: 'scale',
                     name: 'comparison',
                     message:
-                        `[${runState.phaseStep}/${runState.phaseSteps}] How much better is "${stronger.name}" than "${weaker.name}" on "${criterion.name}"?`,
+                        `How much better is "${stronger.name}" than "${weaker.name}" on "${criterion.name}"?`,
                     scale,
                     margin: [1, 1, 2, 1],
                     choices: [{
                         name: 'weight',
                         initial: 1, // Start at "Moderate"
                     }],
-                });
+                };
 
+                logger.clear();
                 const scaleResult = await prompt<ScaleResponse>(
-                    end(runState.steps),
+                    step2,
                     runState,
                 );
-                end(runState.steps).reply = scaleResult;
 
                 // Apply the comparison with selected intensity
                 decision.compare({
@@ -305,13 +275,10 @@ export async function run(
      * Phase 3: Criteria Comparisons
      * Compare the relative importance of criteria in achieving the decision goal.
      */
-    logger.info('\n\nPhase 3: Comparing criteria importance...\n');
-
+    logger.clear();
     runState.phase = 3;
     runState.phaseStep = 0;
-    runState.phaseSteps = decision.criteria.length *
-        (decision.criteria.length - 1);
-    logger.trace({ runState });
+    runState.phaseSteps = criteriaComparisons;
 
     for (const criterion of decision.criteria) {
         for (const otherCriterion of decision.criteria) {
@@ -330,27 +297,27 @@ export async function run(
 
             runState.phaseStep += 1;
             runState.totalStep += 1;
-            logger.trace({ runState });
 
             const choices = [
                 { name: criterion.name, value: criterion.name },
                 { name: otherCriterion.name, value: otherCriterion.name },
             ];
 
-            // Step 1: Identify the less important criterion
-            runState.steps.push({
+            // Substep 1: Identify the less important criterion
+            const step1 = {
+                header: buildStatusLine(runState),
                 type: 'select',
                 name: 'name',
                 message:
-                    `[${runState.phaseStep}/${runState.phaseSteps}] Which criterion is LESS important for achieving the goal?`,
+                    `Which criterion is LESS important for achieving the goal?`,
                 choices,
-            });
+            };
 
+            logger.clear();
             const weakerResponse = await prompt<ComparisonResponse>(
-                end(runState.steps),
+                step1,
                 runState,
             );
-            end(runState.steps).reply = weakerResponse;
 
             const weaker = decision.criteria.find((crit) =>
                 crit.name === weakerResponse.name
@@ -368,29 +335,23 @@ export async function run(
                 weight: Decision.Intensity.Equal,
             });
 
-            runState.phaseStep += 1;
-            runState.totalStep += 1;
-            logger.trace({ runState });
-
-            // Step 2: Determine the importance difference
-            runState.steps.push({
+            // Substep 2: Determine the importance difference
+            const step2 = {
+                header: buildStatusLine(runState),
                 type: 'scale',
                 name: 'comparison',
                 message:
-                    `[${runState.phaseStep}/${runState.phaseSteps}] How much more important is "${stronger.name}" than "${weaker.name}" for the goal?`,
+                    `How much more important is "${stronger.name}" than "${weaker.name}" for the goal?`,
                 scale,
                 margin: [1, 1, 2, 1],
                 choices: [{
                     name: 'weight',
                     initial: 1, // Start at "Moderate"
                 }],
-            });
+            };
 
-            const scaleResult = await prompt<ScaleResponse>(
-                end(runState.steps),
-                runState,
-            );
-            end(runState.steps).reply = scaleResult;
+            logger.clear();
+            const scaleResult = await prompt<ScaleResponse>(step2, runState);
 
             // Apply the criteria comparison
             decision.compare({
@@ -405,11 +366,11 @@ export async function run(
      * Phase 4: Evaluation and Results
      * Calculate final priorities using AHP mathematics and display results.
      */
-    logger.info('\n\nCalculating results...\n');
+    logger.clear();
     runState.phase = 4;
-    runState.phaseStep = 0;
-    runState.phaseSteps = 0;
-    logger.trace({ runState });
+    runState.phaseStep = 1;
+    runState.phaseSteps = 1;
+    runState.totalSteps += 1;
 
     decision.evaluate();
 

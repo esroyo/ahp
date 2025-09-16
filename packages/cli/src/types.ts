@@ -61,6 +61,8 @@ export interface PromptOptions {
     scale?: Array<{ name: number | string; message: string }>;
     /** Optional margin configuration for display */
     margin?: number[];
+    header?: string;
+    footer?: string;
 }
 
 /**
@@ -145,27 +147,6 @@ export interface IntensityScaleOption {
 }
 
 /**
- * Extended prompt options that include reply data for tracking user responses.
- * Used internally to maintain conversation history and enable features like
- * back navigation or response review.
- *
- * @example
- * ```typescript
- * const promptWithReply: PromptOptionsWithReply = {
- *   type: 'select',
- *   name: 'choice',
- *   message: 'Pick the weaker option',
- *   choices: [{ name: 'A' }, { name: 'B' }],
- *   reply: { name: 'A' } // User's previous response
- * };
- * ```
- */
-export interface PromptOptionsWithReply extends PromptOptions {
-    /** The user's response to this prompt (if already answered) */
-    reply?: unknown;
-}
-
-/**
  * Configuration options for CLI argument parsing.
  * Represents the parsed and validated command line arguments.
  *
@@ -175,9 +156,6 @@ export interface PromptOptionsWithReply extends PromptOptions {
  *   help: false,
  *   version: false,
  *   output: 'results.json',
- *   verbose: true,    // -v
- *   debug: true,      // -vv
- *   verboseLevel: 2,  // Number of -v flags
  *   _: [] // No positional arguments
  * };
  * ```
@@ -189,48 +167,14 @@ export interface CliConfig {
     version: boolean;
     /** Optional output file path */
     output?: string;
-    /** Enable verbose logging (-v) */
-    verbose: boolean;
-    /** Enable debug mode (-vv) */
-    debug: boolean;
-    /** Verbosity level (number of -v flags) */
-    verboseLevel: number;
     /** Positional arguments */
     _: (string | number)[];
 }
 
-/**
- * Logger interface for structured output with different log levels.
- * Provides consistent logging across the application with configurable verbosity.
- *
- * @example
- * ```typescript
- * const logger: Logger = {
- *   info: (...data) => console.log(...data),
- *   verbose: (...data) => config.verbose && console.log('[VERBOSE]', ...data),  // -v
- *   debug: (...data) => config.debug && console.log('[DEBUG]', ...data),        // -vv
- *   trace: (...data) => config.verboseLevel >= 3 && console.log('[TRACE]', ...data), // -vvv
- *   error: (...data) => console.error(...data)
- * };
- * ```
- */
-export interface Logger {
-    /** Standard information output */
-    info: (...data: unknown[]) => void;
-    table: (...data: unknown[]) => void;
-    /** Verbose output (shown with -v or higher) */
-    verbose: (...data: unknown[]) => void;
-    /** Debug output (shown with -vv or higher) */
-    debug: (...data: unknown[]) => void;
-    /** Trace output (shown with -vvv or higher) */
-    trace: (...data: unknown[]) => void;
-    /** Error output */
-    error: (...data: unknown[]) => void;
-}
+export type Logger = Pick<Console, 'info' | 'table' | 'clear'>;
 
 export type RunState = {
     decision?: Decision;
-    steps: PromptOptionsWithReply[];
     phase: number;
     phaseSteps: number;
     phaseStep: number;
