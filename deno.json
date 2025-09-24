@@ -16,6 +16,7 @@
             "exclude": ["require-await"]
         }
     },
+    "nodeModulesDir": "auto",
     "publish": {
         "exclude": [
             "**/*_test.ts",
