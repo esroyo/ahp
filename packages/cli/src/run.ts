@@ -21,7 +21,7 @@ const percentage = (pos: number, total: number): number =>
     Math.round(pos / total * 100);
 
 const buildStatusLine = (runState: RunState) => {
-    const progress = percentage(runState.totalStep, runState.totalSteps);
+    const progress = percentage(runState.totalStep, runState.totalSteps) || 0;
     const length = 20;
     const progressBar = Array.from(
         { length },
@@ -34,8 +34,8 @@ const buildStatusLine = (runState: RunState) => {
     const alternatives = `   Alternatives: (${
         runState.decision?.alternatives.length || '?'
     }) ${runState.decision?.alternatives.map((a) => a.name).join(', ') || '-'}`;
-    const step =
-        `   Progress:     [${progressBar}] ${progress}% | ${runState.totalStep}/${runState.totalSteps}`;
+    const totalSteps = runState.totalSteps ? ` | ${runState.totalStep}/${runState.totalSteps}` : '';
+    const step = `   Progress:     [${progressBar}] ${progress}%${totalSteps}`;
     const phase = `   Phase:        ${
         phaseMap[runState.phase]
     } | ${runState.phaseStep}/${runState.phaseSteps}`;
