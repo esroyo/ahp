@@ -73,17 +73,6 @@ const phaseMap: Record<number, string> = {
     4: 'Results',
 };
 
-// const buildStatusLine = (runState: RunState) => {
-//     const goal = `Goal: ${runState.decision?.goal || '-' }`;
-//     const criteria = `Criteria: ${runState.decision?.criteria.length || '-'}`;
-//     const alternatives = `Alternatives: ${runState.decision?.alternatives.length || '-'}`;
-//     const phase = `Phase: ${phaseMap[runState.phase]}`;
-//     const step = `Step: ${runState.phaseStep}/${runState.phaseSteps} [${runState.totalStep}/${runState.totalSteps}]`;
-//     return [goal, criteria, alternatives, phase, step].join(' | ');
-// };
-
-
-
 const percentage = (pos: number, total: number): number =>
     Math.round(pos / total * 100);
 
@@ -101,7 +90,7 @@ const buildStatusLine = (runState: RunState) => {
     const phase = `   Phase:        ${
         phaseMap[runState.phase]
     } (${runState.phaseStep}/${runState.phaseSteps})`;
-    return ['', goal, criteria, alternatives, '', step, phase, ''].join('<br />');
+    return ['', goal, criteria, alternatives, '', step, phase, '', ''].join('<br />');
 };
 
 

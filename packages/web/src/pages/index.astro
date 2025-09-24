@@ -18,7 +18,7 @@ import Layout from '../layouts/Layout.astro';
     height: 100dvh;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 5em minmax(0px, 1fr) minmax(0px, 2fr) minmax(0px, 1fr);
+    grid-template-rows: minmax(0, min-content) auto auto minmax(0, min-content);
     grid-template-areas:
         "header"
         "dialog"
@@ -32,7 +32,13 @@ import Layout from '../layouts/Layout.astro';
 .section-wrapper {
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  overflow: auto;
+}
+
+.section-wrapper.form {
+  align-items: flex-start;
 }
 
 .section-wrapper.footer {
