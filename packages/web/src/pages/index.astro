@@ -1,0 +1,141 @@
+---
+import { title } from '../common.ts';
+import Layout from '../layouts/Layout.astro';
+---
+<Layout>
+    <div class="grid-container">
+        <header class="section-wrapper header"><h1>{ title }</h1></header>
+        <section class="section-wrapper dialog"><div id="dialog"></div></section>
+        <section class="section-wrapper form"><div id="form"></div></section>
+        <section class="section-wrapper footer"><div id="footer"></div></section>
+    </div>
+</Layout>
+
+<script src="../client.ts"></script>
+
+<style is:global>
+.grid-container {
+    height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 5em minmax(0px, 1fr) minmax(0px, 2fr) minmax(0px, 1fr);
+    grid-template-areas:
+        "header"
+        "dialog"
+        "form"
+        "footer";
+    justify-items: center;
+    align-items: stretch;
+    overflow: auto;
+}
+
+.section-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.section-wrapper.footer {
+  background-color: #eee;
+}
+
+form {
+    max-width: 500px;
+    margin: 20px 0;
+    line-height: 1.5;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+}
+
+input[type="text"], input[type="range"] {
+    width: 100%;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"] {
+    padding: 8px 12px;
+}
+
+input[type="range"] {
+    padding: 8px 0px 0px 0px;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 12px;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+fieldset {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 0;
+}
+
+legend {
+    font-weight: 600;
+    color: #374151;
+    padding: 0 8px;
+}
+
+fieldset label {
+    display: flex;
+    align-items: center;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+input[type="radio"] {
+    margin-left: 8px;
+    margin-right: 0;
+    accent-color: #3b82f6;
+}
+
+input[type="range"] {
+    margin: 16px 0;
+    accent-color: #3b82f6;
+}
+
+datalist {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+datalist option {
+    text-align: center;
+    max-width: 80px;
+}
+
+label[for="progressbar"] {
+    display: inline-block;
+}
+</style>
